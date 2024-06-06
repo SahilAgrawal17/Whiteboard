@@ -62,3 +62,4 @@ export const TOOL_ITEMS = {
   
   export const ARROW_LENGTH = 20;
   export const ELEMENT_ERASE_THRESHOLD = 0.01;
+  // export const ELEMENT_ERASE_THRESHOLD_CIRCLE = 0.1;

@@ -1,15 +1,21 @@
 import { useRef, useEffect, useContext, useLayoutEffect} from "react";
 import rough from "roughjs";
 import boardContext from "../../store/board-context";
-import {TOOL_ITEMS} from "../../constants";
+import {TOOL_ACTION_TYPES, TOOL_ITEMS} from "../../constants";
 import toolbarContext from "../../store/toolbar-context"
+import classes from "./index.module.css"
 function Board() {
+  const textAreaRef = useRef();
   const canvasRef = useRef();
   const {
     elements, 
+    toolActionType,
     boardMouseDownHandler, 
     boardMouseMoveHandler, 
     boardMouseUpHandler,
+    textAreaBlurHandler,
+    undo,
+    redo
   } = useContext(boardContext)
   const {toolbarState} = useContext(toolbarContext)
 
@@ -18,6 +24,22 @@ function Board() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   },[]);
+
+ useEffect(( )=>{
+  function handleKeyDown(event){
+    if(event.ctrlKey && event.key === "z"){
+      undo();
+    }
+    else if(event.ctrlKey && event.key === "y"){
+      redo();
+    }
+
+  }
+  document.addEventListener("keydown", handleKeyDown)
+  return () => {
+    document.removeEventListener("keydown", handleKeyDown);
+  }
+ }, [undo, redo])
 
   useLayoutEffect (()=>{
     const canvas = canvasRef.current;
@@ -37,6 +59,13 @@ function Board() {
           context.fill(element.path)
           context.restore();
           break;
+          case TOOL_ITEMS.TEXT:
+            context.textBaseline = "top";
+            context.font = `${element.size}px Arial`;
+            context.fillStyle = element.stroke;
+            context.fillText(element.text, element.x2, element.y1 )
+            context.restore();
+            break;
         default:
           throw new Error("Type not recognized");
       }
@@ -46,6 +75,14 @@ function Board() {
     }
   },[elements])
 
+  useEffect (() =>{
+    const textarea = textAreaRef.current;
+    if(toolActionType === TOOL_ACTION_TYPES.WRITING){
+      setTimeout(()=>{
+        textarea.focus();
+      },0);
+    }
+  },[toolActionType]);
 
   const handleMouseDown = (event) => {
     boardMouseDownHandler(event, toolbarState);
@@ -59,13 +96,27 @@ function Board() {
     boardMouseUpHandler();
   }
   return (
-    <div className="App">
-        <canvas ref={canvasRef} 
+    <>
+      {toolActionType === TOOL_ACTION_TYPES.WRITING &&  <textarea
+        type="text"
+        ref={textAreaRef}
+        className={classes.textElementBox}
+        style={{
+          top :  elements[elements.length -1].y1,
+          left : elements[elements.length -1].x1,
+          fontSize : `${elements[elements.length -1]?.size}px`,
+          color: elements[elements.length -1].stroke
+        }}
+        onBlur = {(event)=> textAreaBlurHandler(event.target.value)}
+      />}
+      <canvas
+        ref={canvasRef}
+        id="canvas"
         onMouseDown={handleMouseDown} 
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        />
-    </div>
+      />
+    </>
 );
 }
 
